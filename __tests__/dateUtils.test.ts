@@ -29,4 +29,10 @@ describe('dateUtils', () => {
     expect(idx).toBeGreaterThanOrEqual(0)
     expect(idx).toBeLessThanOrEqual(6)
   })
+
+  it('todayISO returns local calendar date, not UTC', () => {
+    const now = new Date()
+    const expected = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    expect(todayISO()).toBe(expected)
+  })
 })
