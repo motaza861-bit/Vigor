@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native'
 import Animated from 'react-native-reanimated'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -10,17 +10,23 @@ import { spacing, fontSize, radius } from '../../theme/tokens'
 import { ThemeTokens } from '../../theme/themes'
 
 type SetRow = { reps: string; weight: string; completed: boolean }
-type Exercise = { name: string; sets: SetRow[] }
+type Exercise = { id: string; name: string; sets: SetRow[] }
 
 const INITIAL_EXERCISES: Exercise[] = [
-  { name: 'Bench Press', sets: [{ reps: '8', weight: '80', completed: false }] },
-  { name: 'Overhead Press', sets: [{ reps: '8', weight: '50', completed: false }] },
+  { id: 'ex-1', name: 'Bench Press', sets: [{ reps: '8', weight: '80', completed: false }] },
+  { id: 'ex-2', name: 'Overhead Press', sets: [{ reps: '8', weight: '50', completed: false }] },
 ]
 
 export default function WorkoutScreen() {
   const { theme } = useTheme()
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES)
-  const [sessionSeconds] = useState(0)
+  const [sessionSeconds, setSessionSeconds] = useState(0)
+  const nextIdRef = React.useRef(3)
+
+  useEffect(() => {
+    const id = setInterval(() => setSessionSeconds((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
 
   const addSet = (exerciseIndex: number) => {
     setExercises((prev) =>
@@ -58,9 +64,10 @@ export default function WorkoutScreen() {
   }
 
   const addExercise = () => {
+    const id = `ex-${nextIdRef.current++}`
     setExercises((prev) => [
       ...prev,
-      { name: 'New Exercise', sets: [{ reps: '', weight: '', completed: false }] },
+      { id, name: 'New Exercise', sets: [{ reps: '', weight: '', completed: false }] },
     ])
   }
 
@@ -74,7 +81,7 @@ export default function WorkoutScreen() {
 
       {exercises.map((exercise, i) => (
         <ExerciseCard
-          key={i}
+          key={exercise.id}
           exercise={exercise}
           index={i}
           theme={theme}
@@ -84,7 +91,7 @@ export default function WorkoutScreen() {
         />
       ))}
 
-      <AddExerciseButton onPress={addExercise} />
+      <AddExerciseButton index={exercises.length + 2} onPress={addExercise} />
       <VolumeTrendBlock index={exercises.length + 1} />
     </ScrollView>
   )
@@ -244,8 +251,8 @@ function SetRowView({
   )
 }
 
-function AddExerciseButton({ onPress }: { onPress: () => void }) {
-  const { animatedStyle } = useFadeSlideIn(99)
+function AddExerciseButton({ index, onPress }: { index: number; onPress: () => void }) {
+  const { animatedStyle } = useFadeSlideIn(index)
   return (
     <Animated.View style={[{ marginTop: spacing.sm }, animatedStyle]}>
       <Button label="+ Add Exercise" variant="outline" fullWidth onPress={onPress} />
@@ -267,6 +274,7 @@ function VolumeTrendBlock({ index }: { index: number }) {
 function VolumeTrendContent() {
   const { theme } = useTheme()
   const mockVolumes = [3200, 3600, 3100, 3900]
+  const maxV = Math.max(...mockVolumes)
 
   return (
     <Card>
@@ -275,7 +283,6 @@ function VolumeTrendContent() {
       </Text>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, height: 60 }}>
         {mockVolumes.map((v, i) => {
-          const maxV = Math.max(...mockVolumes)
           const barHeight = (v / maxV) * 60
           return (
             <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>

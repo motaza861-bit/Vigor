@@ -130,7 +130,7 @@ function ConsistencyBlock() {
 
 function ConsistencyGrid() {
   const { theme } = useTheme()
-  const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+  const days = ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su']
   const completed = [true, true, true, false, true, false, false]
 
   return (
@@ -140,7 +140,7 @@ function ConsistencyGrid() {
       </Text>
       <View style={{ flexDirection: 'row', gap: spacing.sm }}>
         {days.map((d, i) => (
-          <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+          <View key={d} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
             <View
               style={{
                 width: 32,

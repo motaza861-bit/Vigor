@@ -17,7 +17,7 @@ export function useFadeSlideIn(index: number) {
     const delay = index * STAGGER_MS
     opacity.value = withDelay(delay, withSpring(1, SPRING_CONFIG))
     translateY.value = withDelay(delay, withSpring(0, SPRING_CONFIG))
-  }, [index])
+  }, [index, opacity, translateY])
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
