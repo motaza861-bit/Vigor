@@ -24,10 +24,4 @@ export const fontSize = {
   display: 48,
 } as const
 
-export const fontWeight = {
-  regular: '400' as const,
-  medium: '500' as const,
-  semibold: '600' as const,
-  bold: '700' as const,
-  black: '900' as const,
-}
+export { FontWeight as fontWeight } from '../constants/fonts'
