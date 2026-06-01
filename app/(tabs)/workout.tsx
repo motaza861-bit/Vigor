@@ -67,9 +67,10 @@ export default function WorkoutScreen() {
 
   const addExercise = () => {
     const id = `ex-${nextIdRef.current++}`
+    const setId = `s-${nextSetIdRef.current++}`
     setExercises((prev) => [
       ...prev,
-      { id, name: 'New Exercise', sets: [{ reps: '', weight: '', completed: false }] },
+      { id, name: 'New Exercise', sets: [{ id: setId, reps: '', weight: '', completed: false }] },
     ])
   }
 
