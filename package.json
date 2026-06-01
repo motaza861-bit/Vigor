@@ -42,6 +42,10 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "haste": {
+      "defaultPlatform": "ios",
+      "platforms": ["android", "ios", "native"]
+    },
     "setupFiles": [
       "./jest.setup.js"
     ],
@@ -63,8 +67,12 @@
       ]
     },
     "transformIgnorePatterns": [
-      "/node_modules/(?!(react-native|@react-native|react-native-mmkv)/)"
-    ]
+      "/node_modules/(?!(react-native|@react-native|@react-native-community|react-native-mmkv|react-native-reanimated|react-native-svg)/)"
+    ],
+    "moduleNameMapper": {
+      "^react-native/Libraries/Utilities/Platform(\\.ios|\\.android|\\.native)?$": "<rootDir>/jestMocks/Platform.js",
+      "^react-native/Libraries/Utilities/Platform\\.js$": "<rootDir>/jestMocks/Platform.js"
+    }
   },
   "private": true
 }
