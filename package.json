@@ -16,12 +16,21 @@
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
-    "react-native-svg": "15.15.4"
+    "react-native-svg": "15.15.4",
+    "react-native-worklets": "^0.9.1"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.29.7",
+    "@babel/preset-react": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "@react-native/jest-preset": "^0.85.3",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/react": "~19.2.2",
+    "babel-jest": "^30.4.1",
+    "babel-preset-expo": "^56.0.14",
+    "jest": "^30.4.2",
+    "jest-expo": "^56.0.4",
     "tailwindcss": "3.3.2",
     "typescript": "~6.0.3"
   },
@@ -29,7 +38,29 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "setupFiles": [
+      "./jest.setup.js"
+    ],
+    "transform": {
+      "\\.[jt]sx?$": [
+        "babel-jest",
+        {
+          "presets": [
+            "@babel/preset-env",
+            "@babel/preset-typescript",
+            ["@babel/preset-react", { "runtime": "automatic" }]
+          ]
+        }
+      ]
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(react-native|@react-native|react-native-mmkv)/)"
+    ]
   },
   "private": true
 }
