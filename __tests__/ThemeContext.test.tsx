@@ -28,11 +28,16 @@ describe('ThemeContext', () => {
   })
 
   it('persists theme key to MMKV on switch', () => {
+    // require() needed here to re-read the mock after mockImplementation reassignment
     const { MMKV } = require('react-native-mmkv')
     const mockSet = jest.fn()
     MMKV.mockImplementation(() => ({ getString: jest.fn(), set: mockSet }))
     const { result } = renderHook(() => useTheme(), { wrapper })
     act(() => result.current.setTheme('LightMinimal'))
     expect(mockSet).toHaveBeenCalledWith('key', 'LightMinimal')
+  })
+
+  it('throws when used outside ThemeProvider', () => {
+    expect(() => renderHook(() => useTheme())).toThrow('useTheme must be used inside ThemeProvider')
   })
 })

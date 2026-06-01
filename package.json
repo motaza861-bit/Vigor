@@ -17,13 +17,12 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "4.25.2",
     "react-native-svg": "15.15.4",
-    "react-native-worklets": "^0.9.1"
+    "react-native-worklets": "^0.8.3"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.29.7",
     "@babel/preset-react": "^7.29.7",
     "@babel/preset-typescript": "^7.29.7",
-    "@react-native/jest-preset": "^0.85.3",
     "@testing-library/jest-native": "^5.4.3",
     "@testing-library/react-native": "^13.3.3",
     "@types/react": "~19.2.2",
@@ -53,7 +52,12 @@
           "presets": [
             "@babel/preset-env",
             "@babel/preset-typescript",
-            ["@babel/preset-react", { "runtime": "automatic" }]
+            [
+              "@babel/preset-react",
+              {
+                "runtime": "automatic"
+              }
+            ]
           ]
         }
       ]
