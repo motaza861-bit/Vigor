@@ -9,15 +9,24 @@ import { TierGate } from '../../components/ui/TierGate'
 import { useFadeSlideIn } from '../../hooks/useFadeSlideIn'
 import { spacing, fontSize, radius } from '../../theme/tokens'
 import { ThemeTokens } from '../../theme/themes'
-
-const TODAY_SPLIT = 'Push Day'
-const CALORIES_CONSUMED = 1640
-const CALORIES_TARGET = 2400
+import { loadDayLog, computeTotals } from '../../stores/nutritionStore'
+import { loadWorkoutLogs, WorkoutLog } from '../../stores/workoutStore'
+import { loadSchedule } from '../../stores/scheduleStore'
+import { todayISO, last7Days, todayDayIndex } from '../../lib/dateUtils'
 
 export default function HomeScreen() {
   const { theme } = useTheme()
-  const progress = CALORIES_CONSUMED / CALORIES_TARGET
-  const remaining = CALORIES_TARGET - CALORIES_CONSUMED
+  const today = todayISO()
+
+  const dayLog = loadDayLog(today)
+  const totals = computeTotals(dayLog.entries)
+  const remaining = dayLog.targets.calories - totals.calories
+  const progress = Math.min(totals.calories / dayLog.targets.calories, 1)
+
+  const schedule = loadSchedule()
+  const todaySplit = schedule[todayDayIndex()]
+
+  const weekLogs = loadWorkoutLogs(last7Days())
 
   return (
     <ScrollView
@@ -25,15 +34,15 @@ export default function HomeScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl }}
       showsVerticalScrollIndicator={false}
     >
-      <Header theme={theme} />
-      <RingSection theme={theme} progress={progress} remaining={remaining} />
+      <Header theme={theme} todaySplit={todaySplit} />
+      <RingSection theme={theme} progress={progress} remaining={remaining} totals={totals} />
       <QuickActions theme={theme} />
-      <ConsistencyBlock />
+      <ConsistencyBlock weekLogs={weekLogs} />
     </ScrollView>
   )
 }
 
-function Header({ theme }: { theme: ThemeTokens }) {
+function Header({ theme, todaySplit }: { theme: ThemeTokens; todaySplit: string }) {
   const { animatedStyle } = useFadeSlideIn(0)
   return (
     <Animated.View style={[{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: spacing.xl }, animatedStyle]}>
@@ -42,7 +51,7 @@ function Header({ theme }: { theme: ThemeTokens }) {
           TODAY
         </Text>
         <Text style={{ color: theme.text, fontSize: fontSize.display, fontWeight: '900', lineHeight: fontSize.display + 4 }}>
-          {TODAY_SPLIT}
+          {todaySplit}
         </Text>
       </View>
       <Pressable
@@ -56,7 +65,17 @@ function Header({ theme }: { theme: ThemeTokens }) {
   )
 }
 
-function RingSection({ theme, progress, remaining }: { theme: ThemeTokens; progress: number; remaining: number }) {
+function RingSection({
+  theme,
+  progress,
+  remaining,
+  totals,
+}: {
+  theme: ThemeTokens
+  progress: number
+  remaining: number
+  totals: { protein: number; carbs: number; fat: number }
+}) {
   const { animatedStyle } = useFadeSlideIn(1)
   return (
     <Animated.View style={[{ alignItems: 'center', marginBottom: spacing.xl }, animatedStyle]}>
@@ -64,13 +83,13 @@ function RingSection({ theme, progress, remaining }: { theme: ThemeTokens; progr
         size={200}
         strokeWidth={16}
         progress={progress}
-        centerLabel={`${remaining}`}
+        centerLabel={`${Math.max(remaining, 0)}`}
         subLabel="kcal remaining"
       />
       <View style={{ flexDirection: 'row', gap: spacing.lg, marginTop: spacing.lg }}>
-        <MacroChip label="Protein" value="142g" theme={theme} />
-        <MacroChip label="Carbs" value="198g" theme={theme} />
-        <MacroChip label="Fat" value="54g" theme={theme} />
+        <MacroChip label="Protein" value={`${totals.protein}g`} theme={theme} />
+        <MacroChip label="Carbs" value={`${totals.carbs}g`} theme={theme} />
+        <MacroChip label="Fat" value={`${totals.fat}g`} theme={theme} />
       </View>
     </Animated.View>
   )
@@ -88,9 +107,9 @@ function MacroChip({ label, value, theme }: { label: string; value: string; them
 function QuickActions({ theme }: { theme: ThemeTokens }) {
   const { animatedStyle } = useFadeSlideIn(2)
   const actions = [
-    { label: 'Log Meal', icon: '＋', onPress: () => {} },
-    { label: 'Log Set', icon: '◈', onPress: () => {} },
-    { label: 'Log Weight', icon: '▲', onPress: () => {} },
+    { label: 'Log Meal', icon: '＋', onPress: () => router.push('/(tabs)/nutrition') },
+    { label: 'Log Set', icon: '◈', onPress: () => router.push('/(tabs)/workout') },
+    { label: 'Log Weight', icon: '▲', onPress: () => router.push('/(tabs)/nutrition') },
   ]
   return (
     <Animated.View style={[{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.xl }, animatedStyle]}>
@@ -117,21 +136,21 @@ function QuickActions({ theme }: { theme: ThemeTokens }) {
   )
 }
 
-function ConsistencyBlock() {
+function ConsistencyBlock({ weekLogs }: { weekLogs: Array<WorkoutLog | null> }) {
   const { animatedStyle } = useFadeSlideIn(3)
   return (
     <Animated.View style={animatedStyle}>
       <TierGate requiredTier="Base">
-        <ConsistencyGrid />
+        <ConsistencyGrid weekLogs={weekLogs} />
       </TierGate>
     </Animated.View>
   )
 }
 
-function ConsistencyGrid() {
+function ConsistencyGrid({ weekLogs }: { weekLogs: Array<WorkoutLog | null> }) {
   const { theme } = useTheme()
   const days = ['M', 'Tu', 'W', 'Th', 'F', 'Sa', 'Su']
-  const completed = [true, true, true, false, true, false, false]
+  const completed = weekLogs.map((log) => log !== null)
 
   return (
     <Card>
