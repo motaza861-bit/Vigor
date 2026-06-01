@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native'
 import Animated from 'react-native-reanimated'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -8,26 +8,78 @@ import { TierGate } from '../../components/ui/TierGate'
 import { useFadeSlideIn } from '../../hooks/useFadeSlideIn'
 import { spacing, fontSize, radius } from '../../theme/tokens'
 import { ThemeTokens } from '../../theme/themes'
+import { loadWorkoutLog, saveWorkoutLog, WorkoutLog, ExerciseEntry } from '../../stores/workoutStore'
+import { loadSchedule } from '../../stores/scheduleStore'
+import { todayISO, todayDayIndex } from '../../lib/dateUtils'
 
 type SetRow = { id: string; reps: string; weight: string; completed: boolean }
 type Exercise = { id: string; name: string; sets: SetRow[] }
 
-const INITIAL_EXERCISES: Exercise[] = [
+function toStoreExercises(exercises: Exercise[]): ExerciseEntry[] {
+  return exercises.map((ex) => ({
+    id: ex.id,
+    name: ex.name,
+    sets: ex.sets.map((s) => ({
+      id: s.id,
+      reps: parseFloat(s.reps) || 0,
+      weight: parseFloat(s.weight) || 0,
+      completed: s.completed,
+    })),
+  }))
+}
+
+function toUIExercises(entries: ExerciseEntry[]): Exercise[] {
+  return entries.map((ex) => ({
+    id: ex.id,
+    name: ex.name,
+    sets: ex.sets.map((s) => ({
+      id: s.id,
+      reps: s.reps.toString(),
+      weight: s.weight.toString(),
+      completed: s.completed,
+    })),
+  }))
+}
+
+const FALLBACK_EXERCISES: Exercise[] = [
   { id: 'ex-1', name: 'Bench Press', sets: [{ id: 's-1', reps: '8', weight: '80', completed: false }] },
   { id: 'ex-2', name: 'Overhead Press', sets: [{ id: 's-1', reps: '8', weight: '50', completed: false }] },
 ]
 
 export default function WorkoutScreen() {
   const { theme } = useTheme()
-  const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES)
+  const today = todayISO()
+  const schedule = loadSchedule()
+  const splitName = schedule[todayDayIndex()]
+
+  const [exercises, setExercises] = useState<Exercise[]>(() => {
+    const log = loadWorkoutLog(today)
+    return log ? toUIExercises(log.exercises) : FALLBACK_EXERCISES
+  })
   const [sessionSeconds, setSessionSeconds] = useState(0)
-  const nextIdRef = React.useRef(3)
-  const nextSetIdRef = React.useRef(2)
+
+  const nextIdRef = useRef(100)
+  const nextSetIdRef = useRef(100)
+  const hasMountedRef = useRef(false)
 
   useEffect(() => {
     const id = setInterval(() => setSessionSeconds((s) => s + 1), 1000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true
+      return
+    }
+    const log: WorkoutLog = {
+      id: `log-${today}`,
+      date: today,
+      splitName,
+      exercises: toStoreExercises(exercises),
+    }
+    saveWorkoutLog(log)
+  }, [exercises, today, splitName])
 
   const addSet = (exerciseIndex: number) => {
     const id = `s-${nextSetIdRef.current++}`
@@ -44,12 +96,7 @@ export default function WorkoutScreen() {
     setExercises((prev) =>
       prev.map((ex, i) =>
         i === exerciseIndex
-          ? {
-              ...ex,
-              sets: ex.sets.map((s, j) =>
-                j === setIndex ? { ...s, completed: !s.completed } : s
-              ),
-            }
+          ? { ...ex, sets: ex.sets.map((s, j) => (j === setIndex ? { ...s, completed: !s.completed } : s)) }
           : ex
       )
     )
@@ -80,7 +127,7 @@ export default function WorkoutScreen() {
       contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
     >
-      <SessionHeader theme={theme} seconds={sessionSeconds} />
+      <SessionHeader theme={theme} seconds={sessionSeconds} splitName={splitName} />
 
       {exercises.map((exercise, i) => (
         <ExerciseCard
@@ -95,12 +142,12 @@ export default function WorkoutScreen() {
       ))}
 
       <AddExerciseButton index={exercises.length + 1} onPress={addExercise} />
-      <VolumeTrendBlock  index={exercises.length + 2} />
+      <VolumeTrendBlock index={exercises.length + 2} />
     </ScrollView>
   )
 }
 
-function SessionHeader({ theme, seconds }: { theme: ThemeTokens; seconds: number }) {
+function SessionHeader({ theme, seconds, splitName }: { theme: ThemeTokens; seconds: number; splitName: string }) {
   const { animatedStyle } = useFadeSlideIn(0)
   const mins = String(Math.floor(seconds / 60)).padStart(2, '0')
   const secs = String(seconds % 60).padStart(2, '0')
@@ -112,7 +159,7 @@ function SessionHeader({ theme, seconds }: { theme: ThemeTokens; seconds: number
           ACTIVE SESSION
         </Text>
         <Text style={{ color: theme.text, fontSize: fontSize.xxl, fontWeight: '900' }}>
-          Push Day
+          {splitName}
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end' }}>
@@ -276,13 +323,15 @@ function VolumeTrendBlock({ index }: { index: number }) {
 
 function VolumeTrendContent() {
   const { theme } = useTheme()
+  const today = todayISO()
+  const log = loadWorkoutLog(today)
   const mockVolumes = [3200, 3600, 3100, 3900]
   const maxV = Math.max(...mockVolumes)
 
   return (
     <Card>
       <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', letterSpacing: 0.8, marginBottom: spacing.md }}>
-        VOLUME TREND — PUSH DAY
+        VOLUME TREND — {log?.splitName ?? 'PUSH DAY'}
       </Text>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm, height: 60 }}>
         {mockVolumes.map((v, i) => {
