@@ -54,7 +54,7 @@
         "babel-jest",
         {
           "presets": [
-            "@babel/preset-env",
+            ["@babel/preset-env", { "targets": { "node": "current" }, "modules": "commonjs" }],
             "@babel/preset-typescript",
             [
               "@babel/preset-react",
@@ -67,11 +67,16 @@
       ]
     },
     "transformIgnorePatterns": [
-      "/node_modules/(?!(react-native|@react-native|@react-native-community|react-native-mmkv|react-native-reanimated|react-native-svg)/)"
+      "/node_modules/(?!(react-native|@react-native|@react-native-community|react-native-mmkv|react-native-reanimated|react-native-svg|react-native-worklets)/)"
     ],
     "moduleNameMapper": {
       "^react-native/Libraries/Utilities/Platform(\\.ios|\\.android|\\.native)?$": "<rootDir>/jestMocks/Platform.js",
-      "^react-native/Libraries/Utilities/Platform\\.js$": "<rootDir>/jestMocks/Platform.js"
+      "^react-native/Libraries/Utilities/Platform\\.js$": "<rootDir>/jestMocks/Platform.js",
+      "^react-native-worklets$": "<rootDir>/jestMocks/react-native-worklets.js",
+      "^react-native-worklets/package\\.json$": "<rootDir>/jestMocks/react-native-worklets-package.json",
+      "^react-native-worklets/(.*)$": "<rootDir>/jestMocks/react-native-worklets.js",
+      "^react-native-reanimated/mock$": "<rootDir>/jestMocks/react-native-reanimated-mock.js",
+      "^react-native-reanimated/scripts/validate-worklets-version$": "<rootDir>/jestMocks/validate-worklets-version.js"
     }
   },
   "private": true
