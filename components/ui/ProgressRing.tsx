@@ -37,7 +37,7 @@ export function ProgressRing({
       duration: 900,
       easing: Easing.out(Easing.cubic),
     })
-  }, [progress])
+  }, [progress, animatedProgress])
 
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: circumference * (1 - animatedProgress.value),
