@@ -14,6 +14,8 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe('UserTierContext', () => {
+  beforeEach(() => jest.clearAllMocks())
+
   it('defaults to Free tier', () => {
     const { result } = renderHook(() => useUserTier(), { wrapper })
     expect(result.current.tier).toBe('Free')
