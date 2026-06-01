@@ -69,9 +69,7 @@ export default function NutritionScreen() {
         />
         <MacroBarsSection theme={theme} totals={totals} targets={dayLog.targets} />
         <EntryListSection theme={theme} entries={dayLog.entries} />
-        <Animated.View style={[{ marginTop: spacing.sm }, useFadeSlideIn(5).animatedStyle]}>
-          <Button label="+ Add Meal" variant="primary" fullWidth onPress={() => setShowAddMeal(true)} />
-        </Animated.View>
+        <AddMealButtonSection onPress={() => setShowAddMeal(true)} />
         <AISuggestionSection />
       </ScrollView>
       <AddMealModal
@@ -235,13 +233,23 @@ function EntryListSection({ theme, entries }: { theme: ThemeTokens; entries: Foo
   )
 }
 
+function AddMealButtonSection({ onPress }: { onPress: () => void }) {
+  const { animatedStyle } = useFadeSlideIn(5)
+  return (
+    <Animated.View style={[{ marginTop: spacing.sm }, animatedStyle]}>
+      <Button label="+ Add Meal" variant="primary" fullWidth onPress={onPress} />
+    </Animated.View>
+  )
+}
+
 function AISuggestionSection() {
+  const { theme } = useTheme()
   const { animatedStyle } = useFadeSlideIn(6)
   return (
     <Animated.View style={[{ marginTop: spacing.lg }, animatedStyle]}>
       <TierGate requiredTier="Premium_AI">
         <Card>
-          <Text style={{ color: useTheme().theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', letterSpacing: 0.8 }}>
+          <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', letterSpacing: 0.8 }}>
             AI MEAL SUGGESTION
           </Text>
         </Card>
