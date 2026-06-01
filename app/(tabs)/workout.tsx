@@ -43,14 +43,16 @@ function toUIExercises(entries: ExerciseEntry[]): Exercise[] {
 
 const FALLBACK_EXERCISES: Exercise[] = [
   { id: 'ex-1', name: 'Bench Press', sets: [{ id: 's-1', reps: '8', weight: '80', completed: false }] },
-  { id: 'ex-2', name: 'Overhead Press', sets: [{ id: 's-1', reps: '8', weight: '50', completed: false }] },
+  { id: 'ex-2', name: 'Overhead Press', sets: [{ id: 's-2', reps: '8', weight: '50', completed: false }] },
 ]
 
 export default function WorkoutScreen() {
   const { theme } = useTheme()
   const today = todayISO()
-  const schedule = loadSchedule()
-  const splitName = schedule[todayDayIndex()]
+  const [splitName] = useState(() => {
+    const schedule = loadSchedule()
+    return schedule[todayDayIndex()]
+  })
 
   const [exercises, setExercises] = useState<Exercise[]>(() => {
     const log = loadWorkoutLog(today)
