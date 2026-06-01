@@ -1,6 +1,6 @@
 import { MMKV } from 'react-native-mmkv'
 
-let storage: any
+let storage: MMKV | undefined
 
 function getStorage() {
   if (!storage) {
