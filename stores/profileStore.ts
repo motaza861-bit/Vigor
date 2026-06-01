@@ -18,7 +18,7 @@ export type UserProfile = {
   goal?: Goal
 }
 
-type MacroResult = { calories: number; protein: number; carbs: number; fat: number }
+export type MacroResult = { calories: number; protein: number; carbs: number; fat: number }
 
 const PROFILE_KEY = 'profile:user'
 
@@ -33,7 +33,7 @@ export function saveProfile(profile: UserProfile): void {
 
 export function calculateTargets(profile: UserProfile): MacroResult | null {
   const { age, weight, height, sex, goal } = profile
-  if (!age || !weight || !height || !sex || !goal) return null
+  if (age == null || weight == null || height == null || !sex || !goal) return null
 
   const bmr = sex === 'male'
     ? 10 * weight + 6.25 * height - 5 * age + 5
