@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { View, Text, ScrollView } from 'react-native'
 import Animated from 'react-native-reanimated'
 import { useTheme } from '../../contexts/ThemeContext'
@@ -24,7 +24,7 @@ export default function ProgressScreen() {
     .filter((p): p is { date: string; weight: number } => p.weight !== undefined)
 
   const weeklyVolumes = [0, 1, 2, 3].map((w) => {
-    const slice = workoutLogs.slice(w * 7, (w + 1) * 7)
+    const slice = workoutLogs.slice(62 + w * 7, 62 + (w + 1) * 7)
     return slice.reduce((sum, log) => {
       if (!log) return sum
       return sum + log.exercises.reduce((exSum, ex) =>
@@ -35,6 +35,7 @@ export default function ProgressScreen() {
   const prMap: Record<string, number> = {}
   nonNullLogs.forEach((log) => {
     log.exercises.forEach((ex) => {
+      if (ex.sets.length === 0) return
       const maxWeight = Math.max(...ex.sets.map((s) => s.weight))
       if (!prMap[ex.name] || maxWeight > prMap[ex.name]) {
         prMap[ex.name] = maxWeight
@@ -216,20 +217,25 @@ function PRTimelineCard({
 }
 
 function MiniLineChart({ theme, points, height }: { theme: ThemeTokens; points: number[]; height: number }) {
+  const [containerWidth, setContainerWidth] = useState(0)
+
   if (points.length < 2) {
     return <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, textAlign: 'center' }}>{points[0]}kg</Text>
   }
   const minV = Math.min(...points)
   const maxV = Math.max(...points)
   const range = maxV - minV || 1
-  const width = 100 / (points.length - 1)
 
   return (
-    <View style={{ height, position: 'relative' }}>
-      {points.map((v, i) => {
+    <View
+      style={{ height, position: 'relative' }}
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
+      {containerWidth > 0 && points.map((v, i) => {
         if (i === 0) return null
-        const x1 = (i - 1) * width
-        const x2 = i * width
+        const stepX = containerWidth / (points.length - 1)
+        const x1 = (i - 1) * stepX
+        const x2 = i * stepX
         const y1 = height - ((points[i - 1] - minV) / range) * (height - 8)
         const y2 = height - ((v - minV) / range) * (height - 8)
         const dx = x2 - x1
@@ -241,9 +247,9 @@ function MiniLineChart({ theme, points, height }: { theme: ThemeTokens; points: 
             key={i}
             style={{
               position: 'absolute',
-              left: `${x1}%`,
+              left: x1,
               top: y1,
-              width: `${(len / 100) * 100}%`,
+              width: len,
               height: 2,
               backgroundColor: theme.accent,
               transform: [{ rotate: `${angle}deg` }],
