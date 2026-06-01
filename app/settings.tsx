@@ -2,7 +2,7 @@ import { View, Text, Pressable, ScrollView } from 'react-native'
 import { router } from 'expo-router'
 import { useTheme } from '../contexts/ThemeContext'
 import { useUserTier, UserTier } from '../contexts/UserTierContext'
-import { ThemeKey } from '../theme/themes'
+import { ThemeKey, ThemeTokens } from '../theme/themes'
 import { spacing, fontSize, radius } from '../theme/tokens'
 
 const THEME_OPTIONS: { key: ThemeKey; label: string }[] = [
@@ -60,7 +60,7 @@ export default function SettingsModal() {
   )
 }
 
-function SectionLabel({ label, theme }: { label: string; theme: any }) {
+function SectionLabel({ label, theme }: { label: string; theme: ThemeTokens }) {
   return (
     <Text
       style={{
@@ -86,7 +86,7 @@ function OptionRow({
   label: string
   selected: boolean
   onPress: () => void
-  theme: any
+  theme: ThemeTokens
 }) {
   return (
     <Pressable
