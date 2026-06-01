@@ -9,12 +9,12 @@ import { useFadeSlideIn } from '../../hooks/useFadeSlideIn'
 import { spacing, fontSize, radius } from '../../theme/tokens'
 import { ThemeTokens } from '../../theme/themes'
 
-type SetRow = { reps: string; weight: string; completed: boolean }
+type SetRow = { id: string; reps: string; weight: string; completed: boolean }
 type Exercise = { id: string; name: string; sets: SetRow[] }
 
 const INITIAL_EXERCISES: Exercise[] = [
-  { id: 'ex-1', name: 'Bench Press', sets: [{ reps: '8', weight: '80', completed: false }] },
-  { id: 'ex-2', name: 'Overhead Press', sets: [{ reps: '8', weight: '50', completed: false }] },
+  { id: 'ex-1', name: 'Bench Press', sets: [{ id: 's-1', reps: '8', weight: '80', completed: false }] },
+  { id: 'ex-2', name: 'Overhead Press', sets: [{ id: 's-1', reps: '8', weight: '50', completed: false }] },
 ]
 
 export default function WorkoutScreen() {
@@ -22,6 +22,7 @@ export default function WorkoutScreen() {
   const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES)
   const [sessionSeconds, setSessionSeconds] = useState(0)
   const nextIdRef = React.useRef(3)
+  const nextSetIdRef = React.useRef(2)
 
   useEffect(() => {
     const id = setInterval(() => setSessionSeconds((s) => s + 1), 1000)
@@ -29,10 +30,11 @@ export default function WorkoutScreen() {
   }, [])
 
   const addSet = (exerciseIndex: number) => {
+    const id = `s-${nextSetIdRef.current++}`
     setExercises((prev) =>
       prev.map((ex, i) =>
         i === exerciseIndex
-          ? { ...ex, sets: [...ex.sets, { reps: '', weight: '', completed: false }] }
+          ? { ...ex, sets: [...ex.sets, { id, reps: '', weight: '', completed: false }] }
           : ex
       )
     )
@@ -91,8 +93,8 @@ export default function WorkoutScreen() {
         />
       ))}
 
-      <AddExerciseButton index={exercises.length + 2} onPress={addExercise} />
-      <VolumeTrendBlock index={exercises.length + 1} />
+      <AddExerciseButton index={exercises.length + 1} onPress={addExercise} />
+      <VolumeTrendBlock  index={exercises.length + 2} />
     </ScrollView>
   )
 }
@@ -155,7 +157,7 @@ function ExerciseCard({
 
         {exercise.sets.map((set, i) => (
           <SetRowView
-            key={i}
+            key={set.id}
             set={set}
             setNumber={i + 1}
             theme={theme}
