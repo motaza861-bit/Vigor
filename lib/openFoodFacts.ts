@@ -10,6 +10,10 @@ export async function openFoodFacts(barcode: string): Promise<ScanResult> {
     throw new ScanError('network_error')
   }
 
+  if (!response.ok) {
+    throw new ScanError('api_error')
+  }
+
   const data = await response.json()
 
   if (data.status === 0) {
@@ -17,7 +21,7 @@ export async function openFoodFacts(barcode: string): Promise<ScanResult> {
   }
 
   const { product } = data
-  const n = product.nutriments
+  const n = product.nutriments ?? {}
   const servingGrams = product.serving_quantity
     ? parseFloat(product.serving_quantity)
     : 100

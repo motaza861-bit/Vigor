@@ -8,6 +8,7 @@ describe('openFoodFacts', () => {
 
   it('returns macros scaled to serving_quantity', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
       json: async () => ({
         status: 1,
         product: {
@@ -31,6 +32,7 @@ describe('openFoodFacts', () => {
 
   it('defaults to 100g when serving_quantity is absent', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
       json: async () => ({
         status: 1,
         product: {
@@ -51,6 +53,7 @@ describe('openFoodFacts', () => {
 
   it('falls back to generic_name when product_name is empty', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
       json: async () => ({
         status: 1,
         product: {
@@ -66,6 +69,7 @@ describe('openFoodFacts', () => {
 
   it('throws ScanError not_found when product is missing', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
       json: async () => ({ status: 0 }),
     })
     await expect(openFoodFacts('0000000000')).rejects.toMatchObject({ code: 'not_found' })
@@ -74,5 +78,31 @@ describe('openFoodFacts', () => {
   it('throws ScanError network_error when fetch rejects', async () => {
     ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('network'))
     await expect(openFoodFacts('1234567890')).rejects.toMatchObject({ code: 'network_error' })
+  })
+
+  it('throws ScanError api_error when response.ok is false', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({}),
+    })
+    await expect(openFoodFacts('1234567890')).rejects.toMatchObject({ code: 'api_error' })
+  })
+
+  it('defaults to 0 calories when nutriments is missing', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        status: 1,
+        product: {
+          product_name: 'Mystery Product',
+          serving_quantity: '100',
+        },
+      }),
+    })
+    const result = await openFoodFacts('5555555555')
+    expect(result.calories).toBe(0)
+    expect(result.protein).toBe(0)
+    expect(result.carbs).toBe(0)
+    expect(result.fat).toBe(0)
   })
 })
