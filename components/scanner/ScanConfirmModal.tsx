@@ -15,9 +15,10 @@ type Props = {
   result: ScanResult | null
   onSave: (entry: Omit<FoodEntry, 'id'>) => void
   onRetake: () => void
+  onClose?: () => void
 }
 
-export function ScanConfirmModal({ visible, result, onSave, onRetake }: Props) {
+export function ScanConfirmModal({ visible, result, onSave, onRetake, onClose }: Props) {
   const { theme } = useTheme()
   const [name, setName] = useState('')
   const [calories, setCalories] = useState('')
@@ -32,6 +33,12 @@ export function ScanConfirmModal({ visible, result, onSave, onRetake }: Props) {
       setProtein(result.protein.toString())
       setCarbs(result.carbs.toString())
       setFat(result.fat.toString())
+    } else {
+      setName('')
+      setCalories('')
+      setProtein('')
+      setCarbs('')
+      setFat('')
     }
   }, [result])
 
@@ -47,12 +54,12 @@ export function ScanConfirmModal({ visible, result, onSave, onRetake }: Props) {
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onRetake}>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose ?? onRetake}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} onPress={onRetake} />
+        <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' }} onPress={onClose ?? onRetake} />
         <View
           style={{
             backgroundColor: theme.surface,

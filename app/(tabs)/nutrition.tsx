@@ -126,6 +126,7 @@ export default function NutritionScreen() {
         result={scanResult}
         onSave={handleAddEntry}
         onRetake={() => { setScanResult(null); setShowScanner(true) }}
+        onClose={() => setScanResult(null)}
       />
     </>
   )

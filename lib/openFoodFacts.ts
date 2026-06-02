@@ -22,9 +22,8 @@ export async function openFoodFacts(barcode: string): Promise<ScanResult> {
 
   const { product } = data
   const n = product.nutriments ?? {}
-  const servingGrams = product.serving_quantity
-    ? parseFloat(product.serving_quantity)
-    : 100
+  const parsedServing = product.serving_quantity ? parseFloat(product.serving_quantity) : 0
+  const servingGrams = parsedServing > 0 ? parsedServing : 100
   const scale = servingGrams / 100
 
   return {

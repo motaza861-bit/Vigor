@@ -84,7 +84,12 @@ export function PhotoScanner({ visible, apiKey, onResult, onClose }: Props) {
     setState('processing')
     try {
       const photo = await cameraRef.current.takePictureAsync({ base64: true, quality: 0.6 })
-      const result = await claudeVision(photo.base64!, apiKey)
+      if (!photo.base64) {
+        setErrorMsg("Couldn't capture image. Try again.")
+        setState('error')
+        return
+      }
+      const result = await claudeVision(photo.base64, apiKey)
       onResult(result)
       setState('idle')
     } catch (e) {

@@ -132,9 +132,11 @@ export function BarcodeScanner({ visible, onResult, onPhotoFallback, onClose }: 
             </Text>
           )}
         </View>
-        <Pressable onPress={onPhotoFallback} style={styles.photoFallback}>
-          <Text style={{ color: '#fff', fontSize: fontSize.sm }}>📷 Take Photo instead</Text>
-        </Pressable>
+        {state !== 'fetching' && (
+          <Pressable onPress={onPhotoFallback} style={styles.photoFallback}>
+            <Text style={{ color: '#fff', fontSize: fontSize.sm }}>📷 Take Photo instead</Text>
+          </Pressable>
+        )}
       </View>
     </Modal>
   )
