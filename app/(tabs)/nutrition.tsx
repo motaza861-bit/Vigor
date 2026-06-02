@@ -15,12 +15,14 @@ import Animated, {
   withTiming,
   Easing,
 } from 'react-native-reanimated'
+import { GestureDetector } from 'react-native-gesture-handler'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { ProgressRing } from '../../components/ui/ProgressRing'
 import { TierGate } from '../../components/ui/TierGate'
 import { useFadeSlideIn } from '../../hooks/useFadeSlideIn'
+import { useDayNavigator } from '../../hooks/useDayNavigator'
 import { spacing, fontSize, radius } from '../../theme/tokens'
 import { ThemeTokens } from '../../theme/themes'
 import {
@@ -31,14 +33,20 @@ import {
   FoodEntry,
   MacroTotals,
 } from '../../stores/nutritionStore'
-import { todayISO } from '../../lib/dateUtils'
 
 export default function NutritionScreen() {
   const { theme } = useTheme()
-  const today = todayISO()
 
-  const [dayLog, setDayLog] = useState<DayLog>(() => loadDayLog(today))
+  const { selectedDate, gesture, formattedLabel, dotDates } = useDayNavigator(
+    (date) => loadDayLog(date).entries.length > 0
+  )
+
+  const [dayLog, setDayLog] = useState<DayLog>(() => loadDayLog(selectedDate))
   const [showAddMeal, setShowAddMeal] = useState(false)
+
+  useEffect(() => {
+    setDayLog(loadDayLog(selectedDate))
+  }, [selectedDate])
 
   const totals = computeTotals(dayLog.entries)
   const calorieProgress = dayLog.targets.calories > 0 ? Math.min(totals.calories / dayLog.targets.calories, 1) : 0
@@ -54,12 +62,14 @@ export default function NutritionScreen() {
 
   return (
     <>
-      <ScrollView
-        style={{ flex: 1, backgroundColor: theme.bg }}
-        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <NutritionHeader theme={theme} />
+      <GestureDetector gesture={gesture}>
+        <ScrollView
+          style={{ flex: 1, backgroundColor: theme.bg }}
+          contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+        >
+          <DotRow dotDates={dotDates} selectedDate={selectedDate} theme={theme} />
+          <NutritionHeader theme={theme} label={formattedLabel} />
         <CalorieRingSection
           theme={theme}
           progress={calorieProgress}
@@ -71,7 +81,8 @@ export default function NutritionScreen() {
         <EntryListSection theme={theme} entries={dayLog.entries} />
         <AddMealButtonSection onPress={() => setShowAddMeal(true)} />
         <AISuggestionSection />
-      </ScrollView>
+        </ScrollView>
+      </GestureDetector>
       <AddMealModal
         visible={showAddMeal}
         theme={theme}
@@ -82,12 +93,44 @@ export default function NutritionScreen() {
   )
 }
 
-function NutritionHeader({ theme }: { theme: ThemeTokens }) {
+function DotRow({
+  dotDates,
+  selectedDate,
+  theme,
+}: {
+  dotDates: string[]
+  selectedDate: string
+  theme: ThemeTokens
+}) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
+      {dotDates.map((date) => {
+        const isSelected = date === selectedDate
+        const isToday = date === dotDates[6]
+        return (
+          <View
+            key={date}
+            style={{
+              width: isSelected ? 10 : 8,
+              height: isSelected ? 10 : 8,
+              borderRadius: 5,
+              backgroundColor: theme.border,
+              borderWidth: isToday ? 1 : 0,
+              borderColor: theme.accent,
+            }}
+          />
+        )
+      })}
+    </View>
+  )
+}
+
+function NutritionHeader({ theme, label }: { theme: ThemeTokens; label: string }) {
   const { animatedStyle } = useFadeSlideIn(0)
   return (
     <Animated.View style={[{ marginBottom: spacing.xl }, animatedStyle]}>
       <Text style={{ color: theme.textMuted, fontSize: fontSize.sm, fontWeight: '600', letterSpacing: 0.8, marginBottom: 4 }}>
-        TODAY
+        {label.toUpperCase()}
       </Text>
       <Text style={{ color: theme.text, fontSize: fontSize.display, fontWeight: '900', lineHeight: fontSize.display + 4 }}>
         Nutrition
