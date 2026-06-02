@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "expo": "~56.0.8",
+    "expo-camera": "~56.0.7",
     "expo-constants": "~56.0.16",
     "expo-linking": "~56.0.13",
     "expo-router": "~56.2.8",
@@ -44,7 +45,11 @@
     "testEnvironment": "node",
     "haste": {
       "defaultPlatform": "ios",
-      "platforms": ["android", "ios", "native"]
+      "platforms": [
+        "android",
+        "ios",
+        "native"
+      ]
     },
     "setupFiles": [
       "./jest.setup.js"
@@ -54,7 +59,15 @@
         "babel-jest",
         {
           "presets": [
-            ["@babel/preset-env", { "targets": { "node": "current" }, "modules": "commonjs" }],
+            [
+              "@babel/preset-env",
+              {
+                "targets": {
+                  "node": "current"
+                },
+                "modules": "commonjs"
+              }
+            ],
             "@babel/preset-typescript",
             [
               "@babel/preset-react",
@@ -67,7 +80,7 @@
       ]
     },
     "transformIgnorePatterns": [
-      "/node_modules/(?!(react-native|@react-native|@react-native-community|react-native-mmkv|react-native-reanimated|react-native-svg|react-native-worklets)/)"
+      "/node_modules/(?!(react-native|@react-native|@react-native-community|react-native-mmkv|react-native-reanimated|react-native-svg|react-native-worklets|expo-camera|expo-modules-core)/)"
     ],
     "moduleNameMapper": {
       "^react-native/Libraries/Utilities/Platform(\\.ios|\\.android|\\.native)?$": "<rootDir>/jestMocks/Platform.js",
