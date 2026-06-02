@@ -1,4 +1,5 @@
 import { MMKV } from 'react-native-mmkv'
+import type { MacroTotals } from './nutritionStore'
 
 let _storage: MMKV | undefined
 function getStorage(): MMKV {
@@ -18,7 +19,7 @@ export type UserProfile = {
   goal?: Goal
 }
 
-export type MacroResult = { calories: number; protein: number; carbs: number; fat: number }
+export type MacroResult = MacroTotals
 
 const PROFILE_KEY = 'profile:user'
 
