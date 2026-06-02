@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { View, Text, Pressable, ScrollView, TextInput } from 'react-native'
 import { router } from 'expo-router'
 import { useTheme } from '../contexts/ThemeContext'
@@ -19,11 +19,19 @@ export default function SettingsModal() {
   const { theme, themeKey, setTheme } = useTheme()
   const { tier, setTier } = useUserTier()
   const [profile, setProfile] = useState<UserProfile>(() => loadProfile())
+  const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const updateProfile = (patch: Partial<UserProfile>) => {
     const updated = { ...profile, ...patch }
     setProfile(updated)
     saveProfile(updated)
+  }
+
+  const updateProfileDebounced = (patch: Partial<UserProfile>) => {
+    const updated = { ...profile, ...patch }
+    setProfile(updated)
+    if (nameDebounceRef.current) clearTimeout(nameDebounceRef.current)
+    nameDebounceRef.current = setTimeout(() => saveProfile(updated), 300)
   }
 
   const targets = calculateTargets(profile)
@@ -47,7 +55,7 @@ export default function SettingsModal() {
       <ProfileInput
         label="Name"
         value={profile.name ?? ''}
-        onChangeText={(v) => updateProfile({ name: v })}
+        onChangeText={(v) => updateProfileDebounced({ name: v })}
         theme={theme}
         placeholder="Your name"
       />
@@ -57,17 +65,23 @@ export default function SettingsModal() {
           <ProfileInput
             label="Age"
             value={profile.age?.toString() ?? ''}
-            onChangeText={(v) => updateProfile({ age: v ? parseInt(v, 10) : undefined })}
+            onChangeText={(v) => {
+              const parsed = v ? parseInt(v, 10) : undefined
+              updateProfile({ age: parsed !== undefined && !isNaN(parsed) ? parsed : undefined })
+            }}
             theme={theme}
             placeholder="25"
-            numeric
+            integer
           />
         </View>
         <View style={{ flex: 1 }}>
           <ProfileInput
             label="Weight (kg)"
             value={profile.weight?.toString() ?? ''}
-            onChangeText={(v) => updateProfile({ weight: v ? parseFloat(v) : undefined })}
+            onChangeText={(v) => {
+              const parsed = v ? parseFloat(v) : undefined
+              updateProfile({ weight: parsed !== undefined && !isNaN(parsed) ? parsed : undefined })
+            }}
             theme={theme}
             placeholder="75"
             numeric
@@ -77,7 +91,10 @@ export default function SettingsModal() {
           <ProfileInput
             label="Height (cm)"
             value={profile.height?.toString() ?? ''}
-            onChangeText={(v) => updateProfile({ height: v ? parseFloat(v) : undefined })}
+            onChangeText={(v) => {
+              const parsed = v ? parseFloat(v) : undefined
+              updateProfile({ height: parsed !== undefined && !isNaN(parsed) ? parsed : undefined })
+            }}
             theme={theme}
             placeholder="175"
             numeric
@@ -201,6 +218,7 @@ function ProfileInput({
   theme,
   placeholder,
   numeric = false,
+  integer = false,
 }: {
   label: string
   value: string
@@ -208,6 +226,7 @@ function ProfileInput({
   theme: ThemeTokens
   placeholder?: string
   numeric?: boolean
+  integer?: boolean
 }) {
   return (
     <View style={{ marginBottom: spacing.sm }}>
@@ -227,7 +246,7 @@ function ProfileInput({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={theme.textMuted}
-        keyboardType={numeric ? 'decimal-pad' : 'default'}
+        keyboardType={integer ? 'numeric' : numeric ? 'decimal-pad' : 'default'}
       />
     </View>
   )
