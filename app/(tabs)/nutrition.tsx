@@ -33,6 +33,12 @@ import {
   FoodEntry,
   MacroTotals,
 } from '../../stores/nutritionStore'
+import { ScannerSheet } from '../../components/scanner/ScannerSheet'
+import { PhotoScanner } from '../../components/scanner/PhotoScanner'
+import { BarcodeScanner } from '../../components/scanner/BarcodeScanner'
+import { ScanConfirmModal } from '../../components/scanner/ScanConfirmModal'
+import { loadApiKey } from '../../stores/apiKeyStore'
+import { ScanResult } from '../../lib/scanTypes'
 
 export default function NutritionScreen() {
   const { theme } = useTheme()
@@ -43,6 +49,11 @@ export default function NutritionScreen() {
 
   const [dayLog, setDayLog] = useState<DayLog>(() => loadDayLog(selectedDate))
   const [showAddMeal, setShowAddMeal] = useState(false)
+  const [showScanner, setShowScanner] = useState(false)
+  const [showPhoto, setShowPhoto] = useState(false)
+  const [showBarcode, setShowBarcode] = useState(false)
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null)
+  const apiKey = loadApiKey()
 
   useEffect(() => {
     setDayLog(loadDayLog(selectedDate))
@@ -58,6 +69,7 @@ export default function NutritionScreen() {
     setDayLog(updated)
     saveDayLog(updated)
     setShowAddMeal(false)
+    setScanResult(null)
   }
 
   return (
@@ -79,8 +91,7 @@ export default function NutritionScreen() {
         />
         <MacroBarsSection theme={theme} totals={totals} targets={dayLog.targets} />
         <EntryListSection theme={theme} entries={dayLog.entries} label={formattedLabel} />
-        <AddMealButtonSection onPress={() => setShowAddMeal(true)} />
-        <AISuggestionSection />
+        <AddMealButtonSection onAddMeal={() => setShowAddMeal(true)} onScan={() => setShowScanner(true)} />
         </ScrollView>
       </GestureDetector>
       <AddMealModal
@@ -88,6 +99,30 @@ export default function NutritionScreen() {
         theme={theme}
         onSave={handleAddEntry}
         onClose={() => setShowAddMeal(false)}
+      />
+      <ScannerSheet
+        visible={showScanner}
+        onPhoto={() => { setShowScanner(false); setShowPhoto(true) }}
+        onBarcode={() => { setShowScanner(false); setShowBarcode(true) }}
+        onClose={() => setShowScanner(false)}
+      />
+      <PhotoScanner
+        visible={showPhoto}
+        apiKey={apiKey}
+        onResult={(result) => { setShowPhoto(false); setScanResult(result) }}
+        onClose={() => setShowPhoto(false)}
+      />
+      <BarcodeScanner
+        visible={showBarcode}
+        onResult={(result) => { setShowBarcode(false); setScanResult(result) }}
+        onPhotoFallback={() => { setShowBarcode(false); setShowPhoto(true) }}
+        onClose={() => setShowBarcode(false)}
+      />
+      <ScanConfirmModal
+        visible={scanResult !== null}
+        result={scanResult}
+        onSave={handleAddEntry}
+        onRetake={() => { setScanResult(null); setShowScanner(true) }}
       />
     </>
   )
@@ -276,27 +311,32 @@ function EntryListSection({ theme, entries, label }: { theme: ThemeTokens; entri
   )
 }
 
-function AddMealButtonSection({ onPress }: { onPress: () => void }) {
+function AddMealButtonSection({ onAddMeal, onScan }: { onAddMeal: () => void; onScan: () => void }) {
+  const { theme } = useTheme()
   const { animatedStyle } = useFadeSlideIn(5)
   return (
     <Animated.View style={[{ marginTop: spacing.sm }, animatedStyle]}>
-      <Button label="+ Add Meal" variant="primary" fullWidth onPress={onPress} />
-    </Animated.View>
-  )
-}
-
-function AISuggestionSection() {
-  const { theme } = useTheme()
-  const { animatedStyle } = useFadeSlideIn(6)
-  return (
-    <Animated.View style={[{ marginTop: spacing.lg }, animatedStyle]}>
-      <TierGate requiredTier="Premium_AI">
-        <Card>
-          <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', letterSpacing: 0.8 }}>
-            AI MEAL SUGGESTION
-          </Text>
-        </Card>
-      </TierGate>
+      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+        <View style={{ flex: 1 }}>
+          <Button label="+ Add Meal" variant="primary" fullWidth onPress={onAddMeal} />
+        </View>
+        <TierGate requiredTier="Premium_AI" variant="coming-soon">
+          <Pressable
+            onPress={onScan}
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: theme.border,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>📷</Text>
+          </Pressable>
+        </TierGate>
+      </View>
     </Animated.View>
   )
 }
