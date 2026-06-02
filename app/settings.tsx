@@ -6,6 +6,7 @@ import { useUserTier, UserTier } from '../contexts/UserTierContext'
 import { ThemeKey, ThemeTokens } from '../theme/themes'
 import { spacing, fontSize, radius } from '../theme/tokens'
 import { loadProfile, saveProfile, calculateTargets, UserProfile, Sex, Goal } from '../stores/profileStore'
+import { loadApiKey, saveApiKey } from '../stores/apiKeyStore'
 
 const THEME_OPTIONS: { key: ThemeKey; label: string }[] = [
   { key: 'DarkAthleticRed', label: 'Dark — Athletic Red' },
@@ -20,6 +21,8 @@ export default function SettingsModal() {
   const { tier, setTier } = useUserTier()
   const [profile, setProfile] = useState<UserProfile>(() => loadProfile())
   const nameDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [apiKey, setApiKey] = useState(() => loadApiKey())
+  const [showKey, setShowKey] = useState(false)
 
   const updateProfile = (patch: Partial<UserProfile>) => {
     const updated = { ...profile, ...patch }
@@ -131,6 +134,20 @@ export default function SettingsModal() {
           ~{targets.calories} kcal · {targets.protein}P · {targets.carbs}C · {targets.fat}F
         </Text>
       )}
+
+      <SectionLabel label="AI" theme={theme} />
+      <ApiKeyInput
+        value={apiKey}
+        showKey={showKey}
+        onToggleShow={() => setShowKey((v) => !v)}
+        onBlur={(v) => { setApiKey(v); saveApiKey(v.trim()) }}
+        theme={theme}
+      />
+      <Text
+        style={{ color: theme.textMuted, fontSize: fontSize.xs, marginBottom: spacing.lg }}
+      >
+        Required for photo food scanning
+      </Text>
 
       <SectionLabel label="APPEARANCE" theme={theme} />
       {THEME_OPTIONS.map(({ key, label }) => (
@@ -248,6 +265,60 @@ function ProfileInput({
         placeholderTextColor={theme.textMuted}
         keyboardType={integer ? 'numeric' : numeric ? 'decimal-pad' : 'default'}
       />
+    </View>
+  )
+}
+
+function ApiKeyInput({
+  value,
+  showKey,
+  onToggleShow,
+  onBlur,
+  theme,
+}: {
+  value: string
+  showKey: boolean
+  onToggleShow: () => void
+  onBlur: (v: string) => void
+  theme: ThemeTokens
+}) {
+  const [localValue, setLocalValue] = useState(value)
+  return (
+    <View style={{ marginBottom: spacing.sm }}>
+      <Text
+        style={{
+          color: theme.textMuted, fontSize: fontSize.xs,
+          fontWeight: '600', marginBottom: 4,
+        }}
+      >
+        ANTHROPIC API KEY
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+        <TextInput
+          style={{
+            flex: 1,
+            backgroundColor: theme.border,
+            color: theme.text,
+            fontSize: fontSize.sm,
+            borderRadius: radius.md,
+            paddingHorizontal: spacing.md,
+            paddingVertical: 10,
+          }}
+          value={localValue}
+          onChangeText={setLocalValue}
+          onBlur={() => onBlur(localValue)}
+          secureTextEntry={!showKey}
+          placeholder="sk-ant-..."
+          placeholderTextColor={theme.textMuted}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+        <Pressable onPress={onToggleShow} hitSlop={12}>
+          <Text style={{ color: theme.textMuted, fontSize: 16 }}>
+            {showKey ? '🙈' : '👁'}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   )
 }
