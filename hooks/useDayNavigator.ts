@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Gesture } from 'react-native-gesture-handler'
+import { last7Days } from '../lib/dateUtils'
 
 function localDateISO(d: Date): string {
   const year = d.getFullYear()
@@ -21,14 +22,6 @@ function formatLabel(offset: number): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function last7DatesFromToday(): string[] {
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - (6 - i))
-    return localDateISO(d)
-  })
-}
-
 export type DayNavigatorResult = {
   selectedDate: string
   dayOffset: number
@@ -39,22 +32,26 @@ export type DayNavigatorResult = {
   _goForward: () => void
 }
 
-export function useDayNavigator(getHasData: (date: string) => boolean): DayNavigatorResult {
+export function useDayNavigator(_getHasData: (date: string) => boolean): DayNavigatorResult {
   const [dayOffset, setDayOffset] = useState(0)
 
   const goBack = () => setDayOffset((o) => Math.max(o - 1, -89))
   const goForward = () => setDayOffset((o) => Math.min(o + 1, 0))
 
-  const gesture = Gesture.Pan()
-    .onEnd((e) => {
-      if (e.translationX < -50) goBack()
-      else if (e.translationX > 50) goForward()
-    })
-    .runOnJS(true)
+  const gesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .onEnd((e) => {
+          if (e.translationX < -50) goBack()
+          else if (e.translationX > 50) goForward()
+        })
+        .runOnJS(true),
+    [] // safe: goBack/goForward use functional updaters, never close over dayOffset
+  )
 
   const selectedDate = localDateISO(offsetToDate(dayOffset))
   const formattedLabel = formatLabel(dayOffset)
-  const dotDates = last7DatesFromToday()
+  const dotDates = last7Days()
 
   return {
     selectedDate,
