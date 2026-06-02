@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated'
 import { GestureDetector } from 'react-native-gesture-handler'
+import { useFocusEffect } from 'expo-router'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -53,7 +54,9 @@ export default function NutritionScreen() {
   const [showPhoto, setShowPhoto] = useState(false)
   const [showBarcode, setShowBarcode] = useState(false)
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
-  const apiKey = loadApiKey()
+  const [apiKey, setApiKey] = useState(() => loadApiKey())
+
+  useFocusEffect(useCallback(() => { setApiKey(loadApiKey()) }, []))
 
   useEffect(() => {
     setDayLog(loadDayLog(selectedDate))

@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   View, Text, Modal, Pressable,
   ActivityIndicator, StyleSheet,
@@ -24,6 +24,13 @@ export function BarcodeScanner({ visible, onResult, onPhotoFallback, onClose }: 
   const [state, setState] = useState<State>('scanning')
   const [errorMsg, setErrorMsg] = useState('')
   const isHandlingRef = useRef(false)
+
+  useEffect(() => {
+    if (visible) {
+      setState('scanning')
+      isHandlingRef.current = false
+    }
+  }, [visible])
 
   if (!permission?.granted) {
     return (
