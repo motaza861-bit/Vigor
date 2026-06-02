@@ -41,6 +41,8 @@ export function useDayNavigator(_getHasData: (date: string) => boolean): DayNavi
   const gesture = useMemo(
     () =>
       Gesture.Pan()
+        .activeOffsetX([-15, 15])
+        .failOffsetY([-10, 10])
         .onEnd((e) => {
           if (e.translationX < -50) goBack()
           else if (e.translationX > 50) goForward()

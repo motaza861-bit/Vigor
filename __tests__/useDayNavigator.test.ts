@@ -6,7 +6,11 @@ import { todayISO } from '../lib/dateUtils'
 jest.mock('react-native-gesture-handler', () => ({
   Gesture: {
     Pan: () => ({
-      onEnd: () => ({ runOnJS: () => ({}) }),
+      activeOffsetX: () => ({
+        failOffsetY: () => ({
+          onEnd: () => ({ runOnJS: () => ({}) }),
+        }),
+      }),
     }),
   },
   GestureDetector: ({ children }: { children: React.ReactNode }) => children,

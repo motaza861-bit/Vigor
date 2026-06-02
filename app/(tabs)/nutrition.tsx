@@ -78,7 +78,7 @@ export default function NutritionScreen() {
           targets={dayLog.targets}
         />
         <MacroBarsSection theme={theme} totals={totals} targets={dayLog.targets} />
-        <EntryListSection theme={theme} entries={dayLog.entries} />
+        <EntryListSection theme={theme} entries={dayLog.entries} label={formattedLabel} />
         <AddMealButtonSection onPress={() => setShowAddMeal(true)} />
         <AISuggestionSection />
         </ScrollView>
@@ -246,12 +246,12 @@ function MacroBar({
   )
 }
 
-function EntryListSection({ theme, entries }: { theme: ThemeTokens; entries: FoodEntry[] }) {
+function EntryListSection({ theme, entries, label }: { theme: ThemeTokens; entries: FoodEntry[]; label: string }) {
   const { animatedStyle } = useFadeSlideIn(3)
   return (
     <Animated.View style={[{ marginBottom: spacing.lg }, animatedStyle]}>
       <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', letterSpacing: 0.8, marginBottom: spacing.sm }}>
-        TODAY'S MEALS
+        {label.toUpperCase()}'S MEALS
       </Text>
       {entries.length === 0 ? (
         <Card>

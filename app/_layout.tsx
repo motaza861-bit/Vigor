@@ -1,6 +1,7 @@
 import '../global.css'
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { AppProvider } from '../contexts/AppProvider'
 import { useTheme } from '../contexts/ThemeContext'
 
@@ -19,8 +20,10 @@ function RootStack() {
 
 export default function RootLayout() {
   return (
-    <AppProvider>
-      <RootStack />
-    </AppProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AppProvider>
+        <RootStack />
+      </AppProvider>
+    </GestureHandlerRootView>
   )
 }
