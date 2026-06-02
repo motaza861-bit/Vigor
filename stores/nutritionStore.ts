@@ -1,4 +1,5 @@
 import { MMKV } from 'react-native-mmkv'
+import { loadProfile, calculateTargets } from './profileStore'
 
 let _storage: MMKV | undefined
 function getStorage(): MMKV {
@@ -29,12 +30,18 @@ export type DayLog = {
   bodyweight?: number
 }
 
-const DEFAULT_TARGETS: MacroTotals = { calories: 2400, protein: 180, carbs: 240, fat: 60 }
+const FALLBACK_TARGETS: MacroTotals = { calories: 2400, protein: 180, carbs: 240, fat: 60 }
 const key = (date: string) => `nutrition:${date}`
+
+function getDefaultTargets(): MacroTotals {
+  const profile = loadProfile()
+  const calculated = calculateTargets(profile)
+  return calculated ?? { ...FALLBACK_TARGETS }
+}
 
 export function loadDayLog(date: string): DayLog {
   const raw = getStorage().getString(key(date))
-  if (!raw) return { date, entries: [], targets: { ...DEFAULT_TARGETS } }
+  if (!raw) return { date, entries: [], targets: getDefaultTargets() }
   return JSON.parse(raw) as DayLog
 }
 
