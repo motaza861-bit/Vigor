@@ -75,9 +75,11 @@ export default function WorkoutScreen() {
   const nextIdRef = useRef(100)
   const nextSetIdRef = useRef(100)
   const hasMountedRef = useRef(false)
+  const isLoadingRef = useRef(false)
 
   useEffect(() => {
     const log = loadWorkoutLog(selectedDate)
+    isLoadingRef.current = true
     setExercises(log ? toUIExercises(log.exercises) : FALLBACK_EXERCISES)
     hasMountedRef.current = false
   }, [selectedDate])
@@ -90,6 +92,10 @@ export default function WorkoutScreen() {
   useEffect(() => {
     if (!hasMountedRef.current) {
       hasMountedRef.current = true
+      return
+    }
+    if (isLoadingRef.current) {
+      isLoadingRef.current = false
       return
     }
     const log: WorkoutLog = {
@@ -198,8 +204,6 @@ export default function WorkoutScreen() {
             onRemove={() => removeExercise(i)}
             onMoveUp={() => moveExercise(i, i - 1)}
             onMoveDown={() => moveExercise(i, i + 1)}
-            isFirst={i === 0}
-            isLast={i === exercises.length - 1}
             onDragStart={() => setScrollEnabled(false)}
             onDragEnd={() => setScrollEnabled(true)}
           />
@@ -293,8 +297,6 @@ function ExerciseCard({
   onRemove,
   onMoveUp,
   onMoveDown,
-  isFirst,
-  isLast,
   onDragStart,
   onDragEnd,
 }: {
@@ -311,41 +313,56 @@ function ExerciseCard({
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
-  isFirst: boolean
-  isLast: boolean
   onDragStart: () => void
   onDragEnd: () => void
 }) {
   const { animatedStyle } = useFadeSlideIn(index + 1)
   const [nameValue, setNameValue] = useState(exercise.name)
 
+  useEffect(() => {
+    setNameValue(exercise.name)
+  }, [exercise.name])
+
   const dragScale = useSharedValue(1)
   const dragCardStyle = useAnimatedStyle(() => ({
     transform: [{ scale: dragScale.value }],
   }))
+
+  const onMoveUpRef = useRef(onMoveUp)
+  const onMoveDownRef = useRef(onMoveDown)
+  const onDragStartRef = useRef(onDragStart)
+  const onDragEndRef = useRef(onDragEnd)
+
+  useEffect(() => {
+    onMoveUpRef.current = onMoveUp
+    onMoveDownRef.current = onMoveDown
+    onDragStartRef.current = onDragStart
+    onDragEndRef.current = onDragEnd
+  })
 
   const dragGesture = useMemo(
     () =>
       Gesture.Pan()
         .onStart(() => {
           dragScale.value = withSpring(1.02)
-          onDragStart()
+          onDragStartRef.current()
         })
         .onEnd((e) => {
           dragScale.value = withSpring(1)
-          onDragEnd()
+          onDragEndRef.current()
           const CARD_HEIGHT = 160
           const steps = Math.round(e.translationY / CARD_HEIGHT)
-          if (steps !== 0) {
-            if (steps < 0) {
-              for (let i = 0; i < Math.abs(steps); i++) onMoveUp()
-            } else {
-              for (let i = 0; i < steps; i++) onMoveDown()
-            }
+          if (steps < 0) {
+            for (let k = 0; k < Math.abs(steps); k++) onMoveUpRef.current()
+          } else if (steps > 0) {
+            for (let k = 0; k < steps; k++) onMoveDownRef.current()
           }
         })
+        .onFinalize(() => {
+          dragScale.value = withSpring(1)
+          onDragEndRef.current()
+        })
         .runOnJS(true),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     []
   )
 
