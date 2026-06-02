@@ -1,11 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { View, Text, ScrollView, Pressable, TextInput } from 'react-native'
-import Animated from 'react-native-reanimated'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated'
+import { GestureDetector, Gesture } from 'react-native-gesture-handler'
 import { useTheme } from '../../contexts/ThemeContext'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { TierGate } from '../../components/ui/TierGate'
 import { useFadeSlideIn } from '../../hooks/useFadeSlideIn'
+import { useDayNavigator } from '../../hooks/useDayNavigator'
 import { spacing, fontSize, radius } from '../../theme/tokens'
 import { ThemeTokens } from '../../theme/themes'
 import { loadWorkoutLog, saveWorkoutLog, WorkoutLog, ExerciseEntry } from '../../stores/workoutStore'
@@ -48,21 +54,33 @@ const FALLBACK_EXERCISES: Exercise[] = [
 
 export default function WorkoutScreen() {
   const { theme } = useTheme()
-  const today = todayISO()
+
+  const { selectedDate, gesture: dayGesture, formattedLabel, dotDates } = useDayNavigator(
+    (date) => loadWorkoutLog(date) !== null
+  )
+
   const [splitName] = useState(() => {
     const schedule = loadSchedule()
     return schedule[todayDayIndex()]
   })
 
   const [exercises, setExercises] = useState<Exercise[]>(() => {
-    const log = loadWorkoutLog(today)
+    const log = loadWorkoutLog(selectedDate)
     return log ? toUIExercises(log.exercises) : FALLBACK_EXERCISES
   })
   const [sessionSeconds, setSessionSeconds] = useState(0)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [scrollEnabled, setScrollEnabled] = useState(true)
 
   const nextIdRef = useRef(100)
   const nextSetIdRef = useRef(100)
   const hasMountedRef = useRef(false)
+
+  useEffect(() => {
+    const log = loadWorkoutLog(selectedDate)
+    setExercises(log ? toUIExercises(log.exercises) : FALLBACK_EXERCISES)
+    hasMountedRef.current = false
+  }, [selectedDate])
 
   useEffect(() => {
     const id = setInterval(() => setSessionSeconds((s) => s + 1), 1000)
@@ -75,13 +93,13 @@ export default function WorkoutScreen() {
       return
     }
     const log: WorkoutLog = {
-      id: `log-${today}`,
-      date: today,
+      id: `log-${selectedDate}`,
+      date: selectedDate,
       splitName,
       exercises: toStoreExercises(exercises),
     }
     saveWorkoutLog(log)
-  }, [exercises, today, splitName])
+  }, [exercises, selectedDate, splitName])
 
   const addSet = (exerciseIndex: number) => {
     const id = `s-${nextSetIdRef.current++}`
@@ -114,6 +132,36 @@ export default function WorkoutScreen() {
     )
   }
 
+  const removeSet = (exerciseIndex: number, setIndex: number) => {
+    setExercises((prev) =>
+      prev.map((ex, i) =>
+        i === exerciseIndex
+          ? { ...ex, sets: ex.sets.filter((_, j) => j !== setIndex) }
+          : ex
+      )
+    )
+  }
+
+  const renameExercise = (exerciseIndex: number, name: string) => {
+    setExercises((prev) =>
+      prev.map((ex, i) => (i === exerciseIndex ? { ...ex, name: name || ex.name } : ex))
+    )
+  }
+
+  const removeExercise = (exerciseIndex: number) => {
+    setExercises((prev) => prev.filter((_, i) => i !== exerciseIndex))
+  }
+
+  const moveExercise = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= exercises.length) return
+    setExercises((prev) => {
+      const arr = [...prev]
+      const [item] = arr.splice(fromIndex, 1)
+      arr.splice(toIndex, 0, item)
+      return arr
+    })
+  }
+
   const addExercise = () => {
     const id = `ex-${nextIdRef.current++}`
     const setId = `s-${nextSetIdRef.current++}`
@@ -124,32 +172,89 @@ export default function WorkoutScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: theme.bg }}
-      contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: 120 }}
-      showsVerticalScrollIndicator={false}
-    >
-      <SessionHeader theme={theme} seconds={sessionSeconds} splitName={splitName} />
+    <GestureDetector gesture={dayGesture}>
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.bg }}
+        contentContainerStyle={{ padding: spacing.lg, paddingTop: spacing.xxl, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={scrollEnabled}
+      >
+        <DotRow dotDates={dotDates} selectedDate={selectedDate} theme={theme} />
+        <SessionHeader theme={theme} seconds={sessionSeconds} splitName={splitName} label={formattedLabel} />
 
-      {exercises.map((exercise, i) => (
-        <ExerciseCard
-          key={exercise.id}
-          exercise={exercise}
-          index={i}
-          theme={theme}
-          onAddSet={() => addSet(i)}
-          onToggleSet={(setIdx) => toggleSet(i, setIdx)}
-          onUpdateSet={(setIdx, field, val) => updateSet(i, setIdx, field, val)}
-        />
-      ))}
+        {exercises.map((exercise, i) => (
+          <ExerciseCard
+            key={exercise.id}
+            exercise={exercise}
+            index={i}
+            theme={theme}
+            isEditing={editingId === exercise.id}
+            onStartEdit={() => setEditingId(exercise.id)}
+            onRename={(name) => { renameExercise(i, name); setEditingId(null) }}
+            onAddSet={() => addSet(i)}
+            onToggleSet={(setIdx) => toggleSet(i, setIdx)}
+            onUpdateSet={(setIdx, field, val) => updateSet(i, setIdx, field, val)}
+            onRemoveSet={(setIdx) => removeSet(i, setIdx)}
+            onRemove={() => removeExercise(i)}
+            onMoveUp={() => moveExercise(i, i - 1)}
+            onMoveDown={() => moveExercise(i, i + 1)}
+            isFirst={i === 0}
+            isLast={i === exercises.length - 1}
+            onDragStart={() => setScrollEnabled(false)}
+            onDragEnd={() => setScrollEnabled(true)}
+          />
+        ))}
 
-      <AddExerciseButton index={exercises.length + 1} onPress={addExercise} />
-      <VolumeTrendBlock index={exercises.length + 2} />
-    </ScrollView>
+        <AddExerciseButton index={exercises.length + 1} onPress={addExercise} />
+        <VolumeTrendBlock index={exercises.length + 2} />
+      </ScrollView>
+    </GestureDetector>
   )
 }
 
-function SessionHeader({ theme, seconds, splitName }: { theme: ThemeTokens; seconds: number; splitName: string }) {
+function DotRow({
+  dotDates,
+  selectedDate,
+  theme,
+}: {
+  dotDates: string[]
+  selectedDate: string
+  theme: ThemeTokens
+}) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
+      {dotDates.map((date) => {
+        const isSelected = date === selectedDate
+        const isToday = date === dotDates[6]
+        return (
+          <View
+            key={date}
+            style={{
+              width: isSelected ? 10 : 8,
+              height: isSelected ? 10 : 8,
+              borderRadius: 5,
+              backgroundColor: theme.border,
+              borderWidth: isToday ? 1 : 0,
+              borderColor: theme.accent,
+            }}
+          />
+        )
+      })}
+    </View>
+  )
+}
+
+function SessionHeader({
+  theme,
+  seconds,
+  splitName,
+  label,
+}: {
+  theme: ThemeTokens
+  seconds: number
+  splitName: string
+  label: string
+}) {
   const { animatedStyle } = useFadeSlideIn(0)
   const mins = String(Math.floor(seconds / 60)).padStart(2, '0')
   const secs = String(seconds % 60).padStart(2, '0')
@@ -158,7 +263,7 @@ function SessionHeader({ theme, seconds, splitName }: { theme: ThemeTokens; seco
     <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl }, animatedStyle]}>
       <View style={{ flex: 1 }}>
         <Text style={{ color: theme.textMuted, fontSize: fontSize.sm, fontWeight: '600', letterSpacing: 0.8, marginBottom: 4 }}>
-          ACTIVE SESSION
+          {label.toUpperCase()}
         </Text>
         <Text style={{ color: theme.text, fontSize: fontSize.xxl, fontWeight: '900' }}>
           {splitName}
@@ -178,61 +283,152 @@ function ExerciseCard({
   exercise,
   index,
   theme,
+  isEditing,
+  onStartEdit,
+  onRename,
   onAddSet,
   onToggleSet,
   onUpdateSet,
+  onRemoveSet,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
+  onDragStart,
+  onDragEnd,
 }: {
   exercise: Exercise
   index: number
   theme: ThemeTokens
+  isEditing: boolean
+  onStartEdit: () => void
+  onRename: (name: string) => void
   onAddSet: () => void
   onToggleSet: (i: number) => void
   onUpdateSet: (i: number, field: 'reps' | 'weight', val: string) => void
+  onRemoveSet: (i: number) => void
+  onRemove: () => void
+  onMoveUp: () => void
+  onMoveDown: () => void
+  isFirst: boolean
+  isLast: boolean
+  onDragStart: () => void
+  onDragEnd: () => void
 }) {
   const { animatedStyle } = useFadeSlideIn(index + 1)
+  const [nameValue, setNameValue] = useState(exercise.name)
+
+  const dragScale = useSharedValue(1)
+  const dragCardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: dragScale.value }],
+  }))
+
+  const dragGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .onStart(() => {
+          dragScale.value = withSpring(1.02)
+          onDragStart()
+        })
+        .onEnd((e) => {
+          dragScale.value = withSpring(1)
+          onDragEnd()
+          const CARD_HEIGHT = 160
+          const steps = Math.round(e.translationY / CARD_HEIGHT)
+          if (steps !== 0) {
+            if (steps < 0) {
+              for (let i = 0; i < Math.abs(steps); i++) onMoveUp()
+            } else {
+              for (let i = 0; i < steps; i++) onMoveDown()
+            }
+          }
+        })
+        .runOnJS(true),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
 
   return (
     <Animated.View style={[{ marginBottom: spacing.md }, animatedStyle]}>
-      <Card>
-        <Text style={{ color: theme.text, fontSize: fontSize.lg, fontWeight: '700', marginBottom: spacing.md }}>
-          {exercise.name}
-        </Text>
+      <Animated.View style={dragCardStyle}>
+        <Card>
+          {/* Header row: drag handle | name | trash */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+            <GestureDetector gesture={dragGesture}>
+              <View style={{ paddingRight: spacing.sm, paddingVertical: 4 }}>
+                <Text style={{ color: theme.textMuted, fontSize: fontSize.lg }}>≡</Text>
+              </View>
+            </GestureDetector>
 
-        <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
-          <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', width: 32, textAlign: 'center' }}>SET</Text>
-          <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', flex: 1, textAlign: 'center' }}>REPS</Text>
-          <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', flex: 1, textAlign: 'center' }}>KG</Text>
-          <View style={{ width: 36 }} />
-        </View>
+            {isEditing ? (
+              <TextInput
+                style={{
+                  flex: 1,
+                  color: theme.text,
+                  fontSize: fontSize.lg,
+                  fontWeight: '700',
+                  borderBottomWidth: 1,
+                  borderBottomColor: theme.accent,
+                  paddingVertical: 2,
+                }}
+                value={nameValue}
+                onChangeText={setNameValue}
+                onBlur={() => onRename(nameValue)}
+                onSubmitEditing={() => onRename(nameValue)}
+                autoFocus
+              />
+            ) : (
+              <Pressable onPress={onStartEdit} style={{ flex: 1 }}>
+                <Text style={{ color: theme.text, fontSize: fontSize.lg, fontWeight: '700' }}>
+                  {exercise.name}
+                </Text>
+              </Pressable>
+            )}
 
-        {exercise.sets.map((set, i) => (
-          <SetRowView
-            key={set.id}
-            set={set}
-            setNumber={i + 1}
-            theme={theme}
-            onToggle={() => onToggleSet(i)}
-            onChangeReps={(v) => onUpdateSet(i, 'reps', v)}
-            onChangeWeight={(v) => onUpdateSet(i, 'weight', v)}
-          />
-        ))}
+            <Pressable onPress={onRemove} hitSlop={8} style={{ paddingLeft: spacing.sm }}>
+              <Text style={{ color: theme.textMuted, fontSize: fontSize.md }}>✕</Text>
+            </Pressable>
+          </View>
 
-        <Pressable
-          onPress={onAddSet}
-          style={({ pressed }) => ({
-            marginTop: spacing.sm,
-            padding: spacing.sm,
-            alignItems: 'center',
-            borderRadius: radius.md,
-            borderWidth: 1,
-            borderColor: theme.border,
-            borderStyle: 'dashed',
-            opacity: pressed ? 0.6 : 1,
-          })}
-        >
-          <Text style={{ color: theme.textMuted, fontSize: fontSize.sm, fontWeight: '600' }}>+ Add Set</Text>
-        </Pressable>
-      </Card>
+          <View style={{ flexDirection: 'row', marginBottom: spacing.sm }}>
+            <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', width: 32, textAlign: 'center' }}>SET</Text>
+            <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', flex: 1, textAlign: 'center' }}>REPS</Text>
+            <Text style={{ color: theme.textMuted, fontSize: fontSize.xs, fontWeight: '600', flex: 1, textAlign: 'center' }}>KG</Text>
+            <View style={{ width: 36 }} />
+            <View style={{ width: 28 }} />
+          </View>
+
+          {exercise.sets.map((set, i) => (
+            <SetRowView
+              key={set.id}
+              set={set}
+              setNumber={i + 1}
+              theme={theme}
+              onToggle={() => onToggleSet(i)}
+              onChangeReps={(v) => onUpdateSet(i, 'reps', v)}
+              onChangeWeight={(v) => onUpdateSet(i, 'weight', v)}
+              onRemove={() => onRemoveSet(i)}
+            />
+          ))}
+
+          <Pressable
+            onPress={onAddSet}
+            style={({ pressed }) => ({
+              marginTop: spacing.sm,
+              padding: spacing.sm,
+              alignItems: 'center',
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: theme.border,
+              borderStyle: 'dashed',
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Text style={{ color: theme.textMuted, fontSize: fontSize.sm, fontWeight: '600' }}>+ Add Set</Text>
+          </Pressable>
+        </Card>
+      </Animated.View>
     </Animated.View>
   )
 }
@@ -244,6 +440,7 @@ function SetRowView({
   onToggle,
   onChangeReps,
   onChangeWeight,
+  onRemove,
 }: {
   set: SetRow
   setNumber: number
@@ -251,6 +448,7 @@ function SetRowView({
   onToggle: () => void
   onChangeReps: (v: string) => void
   onChangeWeight: (v: string) => void
+  onRemove: () => void
 }) {
   const inputStyle = {
     flex: 1,
@@ -298,6 +496,9 @@ function SetRowView({
         >
           {set.completed && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>✓</Text>}
         </View>
+      </Pressable>
+      <Pressable onPress={onRemove} style={{ width: 28, alignItems: 'center' }} hitSlop={6}>
+        <Text style={{ color: theme.textMuted, fontSize: fontSize.xs }}>✕</Text>
       </Pressable>
     </View>
   )
