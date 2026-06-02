@@ -140,7 +140,7 @@ export default function SettingsModal() {
         value={apiKey}
         showKey={showKey}
         onToggleShow={() => setShowKey((v) => !v)}
-        onBlur={(v) => { setApiKey(v); saveApiKey(v.trim()) }}
+        onBlur={(v) => { const trimmed = v.trim(); setApiKey(trimmed); saveApiKey(trimmed) }}
         theme={theme}
       />
       <Text
@@ -297,12 +297,14 @@ function ApiKeyInput({
         <TextInput
           style={{
             flex: 1,
-            backgroundColor: theme.border,
+            backgroundColor: theme.surface,
             color: theme.text,
             fontSize: fontSize.sm,
             borderRadius: radius.md,
             paddingHorizontal: spacing.md,
             paddingVertical: 10,
+            borderWidth: 1,
+            borderColor: theme.border,
           }}
           value={localValue}
           onChangeText={setLocalValue}
